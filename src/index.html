@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>物流条码生成器 - 大条码版</title>
+<title>物流条码生成器 - 智能解析版</title>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <style>
 * {
@@ -297,11 +297,21 @@ h1 {
   color: #722ed1;
 }
 
+.direct-hint .example {
+  background: #f0f0f0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-top: 8px;
+  font-family: monospace;
+}
+
 .nav-controls {
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: 16px;
   margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .nav-btn {
@@ -324,6 +334,53 @@ h1 {
 .nav-btn:disabled {
   background: #d9d9d9;
   cursor: not-allowed;
+}
+
+.page-jump {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f5f5f5;
+  padding: 6px 16px;
+  border-radius: 40px;
+}
+
+.page-jump span {
+  font-size: 14px;
+  color: #666;
+}
+
+.page-jump input {
+  width: 70px;
+  padding: 8px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 14px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.page-jump input:focus {
+  outline: none;
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24,144,255,0.2);
+}
+
+.page-jump button {
+  padding: 8px 16px;
+  background: #52c41a;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.page-jump button:hover {
+  background: #389e0d;
+  transform: translateY(-1px);
 }
 
 .page-info {
@@ -435,14 +492,23 @@ h1 {
   .direct-input-group button {
     width: 100%;
   }
+  
+  .nav-controls {
+    flex-direction: column;
+  }
+  
+  .page-jump {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>
 </head>
 <body>
 <div class="container">
   <div class="card">
-    <h1>📦 物流条码生成器 - 大条码版</h1>
-    <div class="subtitle">支持Excel上传 | 条码加大加粗 | 支持单号灵活输入（逗号/范围）</div>
+    <h1>📦 物流条码生成器 - 智能解析版</h1>
+    <div class="subtitle">支持Excel上传 | 智能解析子单号 | 页码跳转</div>
     
     <div class="upload-area" onclick="document.getElementById('fileInput').click()">
       <div class="upload-icon">📁</div>
@@ -484,18 +550,23 @@ h1 {
       </div>
       
       <div class="direct-generate">
-        <h4>⚡ 直接生成条码</h4>
+        <h4>⚡ 直接生成条码（智能解析）</h4>
         <div class="direct-input-group">
           <input type="text" id="waybillInput" class="waybill-input" placeholder="12位运单号，例如：112712345678" maxlength="12">
-          <input type="text" id="subInput" class="sub-input" placeholder="子单号（支持多种格式）&#10;单个：002&#10;多个：002,004,006,008,011&#10;范围：005-007&#10;混合：001,003,005-008,010">
+          <input type="text" id="subInput" class="sub-input" placeholder="子单号（智能解析）">
           <button onclick="generateMultipleBarcodes()">生成条码</button>
         </div>
         <div class="direct-hint">
-          💡 <strong>输入说明：</strong><br>
-          • <strong>单个</strong>：第二部分输入 "002" → 生成 112712345678002<br>
-          • <strong>多个</strong>：第二部分输入 "002,004,006,008,011" → 生成5个条码<br>
-          • <strong>范围</strong>：第二部分输入 "005-007" → 生成 005,006,007 三个条码<br>
-          • <strong>混合</strong>：第二部分输入 "001,003,005-008,010" → 支持逗号和范围混合
+          💡 <strong>智能解析规则：</strong> 自动识别所有数字，每1-3位数字作为一个子单号<br>
+          <div class="example">
+            📝 示例：<br>
+            • "2.3.6" → 002, 003, 006<br>
+            • "1.002.69" → 001, 002, 069<br>
+            • "003069085" → 003, 069, 085<br>
+            • "002,004,006" → 002, 004, 006<br>
+            • "005-007" → 005, 006, 007<br>
+            • "1,3,5-8,010" → 001, 003, 005, 006, 007, 008, 010
+          </div>
         </div>
       </div>
     </div>
@@ -503,6 +574,14 @@ h1 {
   
   <div class="nav-controls" id="navControls" style="display: none;">
     <button class="nav-btn" onclick="prevOrder()" id="prevBtn">← 上一单</button>
+    
+    <div class="page-jump">
+      <span>第</span>
+      <input type="number" id="pageNumber" min="1" value="1" step="1">
+      <span>单</span>
+      <button onclick="jumpToPage()">跳转</button>
+    </div>
+    
     <button class="nav-btn" onclick="nextOrder()" id="nextBtn">下一单 →</button>
   </div>
   
@@ -514,7 +593,7 @@ h1 {
 </div>
 
 <script>
-// ==================== CODE128 条码生成器（加大版）====================
+// ==================== CODE128 条码生成器 ====================
 const Code128 = {
   charMap: {
     '0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
@@ -586,43 +665,73 @@ const Code128 = {
   }
 };
 
-// ==================== 子单号解析器 ====================
+// ==================== 智能子单号解析器 ====================
 function parseSubNumbers(input) {
   if (!input || !input.trim()) return [];
   
   const result = [];
   const str = input.trim();
   
-  // 按逗号分割（支持中英文逗号、空格）
-  const parts = str.split(/[,，\s]+/);
+  // 第一步：先处理范围（如：005-007）
+  const rangeRegex = /(\d+)\s*[-~～]\s*(\d+)/g;
+  let rangeMatch;
+  const rangeResults = [];
   
-  for (const part of parts) {
-    if (!part) continue;
-    
-    // 检查是否为范围（如：005-007）
-    if (part.includes('-')) {
-      const rangeParts = part.split('-');
-      if (rangeParts.length === 2) {
-        const start = parseInt(rangeParts[0]);
-        const end = parseInt(rangeParts[1]);
-        if (!isNaN(start) && !isNaN(end) && start <= end) {
-          for (let i = start; i <= end; i++) {
-            result.push(i.toString().padStart(3, '0'));
-          }
-        }
-      }
-    } 
-    // 单个数字
-    else {
-      const num = parseInt(part);
-      if (!isNaN(num)) {
-        result.push(num.toString().padStart(3, '0'));
+  while ((rangeMatch = rangeRegex.exec(str)) !== null) {
+    const start = parseInt(rangeMatch[1]);
+    const end = parseInt(rangeMatch[2]);
+    if (!isNaN(start) && !isNaN(end) && start <= end) {
+      for (let i = start; i <= end; i++) {
+        rangeResults.push(i.toString().padStart(3, '0'));
       }
     }
   }
   
-  // 去重并排序
-  return [...new Set(result)].sort();
+  // 第二步：提取所有连续的数字串
+  const numberRegex = /\d+/g;
+  let match;
+  const numberSegments = [];
+  
+  while ((match = numberRegex.exec(str)) !== null) {
+    numberSegments.push(match[0]);
+  }
+  
+  // 第三步：处理每个数字串
+  for (const segment of numberSegments) {
+    if (segment.length <= 3) {
+      const num = parseInt(segment);
+      if (!isNaN(num)) {
+        result.push(num.toString().padStart(3, '0'));
+      }
+    } else {
+      for (let i = 0; i < segment.length; i += 3) {
+        const part = segment.substr(i, 3);
+        if (part.length === 3) {
+          const num = parseInt(part);
+          if (!isNaN(num)) {
+            result.push(num.toString().padStart(3, '0'));
+          }
+        } else if (part.length > 0) {
+          const num = parseInt(part);
+          if (!isNaN(num)) {
+            result.push(num.toString().padStart(3, '0'));
+          }
+        }
+      }
+    }
+  }
+  
+  // 合并范围结果和普通结果
+  const allResults = [...rangeResults, ...result];
+  const unique = [...new Set(allResults)];
+  const sorted = unique.sort((a, b) => parseInt(a) - parseInt(b));
+  
+  if (sorted.length > 100) {
+    alert(`解析出 ${sorted.length} 个子单号，最多生成100个，已截取前100个`);
+    return sorted.slice(0, 100);
+  }
+  
+  return sorted;
 }
 
 // 生成多个条码
@@ -630,7 +739,6 @@ function generateMultipleBarcodes() {
   const waybill = document.getElementById('waybillInput').value.trim();
   const subInput = document.getElementById('subInput').value.trim();
   
-  // 验证运单号
   if (!waybill) {
     alert('请输入12位运单号');
     return;
@@ -642,44 +750,32 @@ function generateMultipleBarcodes() {
     return;
   }
   
-  // 验证子单号输入
   if (!subInput) {
-    alert('请输入子单号（支持单个、逗号分隔、范围）');
+    alert('请输入子单号（支持任意格式，自动智能解析）');
     return;
   }
   
-  // 解析子单号
   const subNumbers = parseSubNumbers(subInput);
   
   if (subNumbers.length === 0) {
-    alert('未能解析出有效的子单号，请检查输入格式\n\n示例：\n单个：002\n多个：002,004,006\n范围：005-007');
+    alert('未能解析出有效的子单号，请检查输入格式\n\n示例：\n• "2.3.6" → 002,003,006\n• "003069085" → 003,069,085\n• "005-007" → 005,006,007');
     return;
   }
   
-  // 生成完整的15位条码
   const barcodes = subNumbers.map(sub => waybillClean + sub);
-  
-  // 显示结果
-  displaySingleModeBarcodes(barcodes);
-  
-  // 清空输入框（可选）
-  // document.getElementById('waybillInput').value = '';
-  // document.getElementById('subInput').value = '';
+  displaySingleModeBarcodes(barcodes, waybillClean, subNumbers);
 }
 
 // 显示单模式条码
-function displaySingleModeBarcodes(barcodes) {
-  // 隐藏导航按钮
+function displaySingleModeBarcodes(barcodes, waybill, subNumbers) {
   document.getElementById('navControls').style.display = 'none';
   
-  // 更新页面信息
-  const waybill = barcodes[0].substring(0, 12);
   document.getElementById('pageInfo').innerHTML = `
     ⚡ 单条码模式 | 运单号: <strong style="font-size:20px;">${waybill}</strong> | 共生成 ${barcodes.length} 个条码
     <button onclick="switchToExcelMode()" style="margin-left:16px;padding:6px 16px;background:#52c41a;color:white;border:none;border-radius:6px;cursor:pointer;">📊 切换回Excel模式</button>
+    <div style="font-size:14px; margin-top:8px; color:#722ed1;">📝 解析出的子单号: ${subNumbers.join(', ')}</div>
   `;
   
-  // 生成条码显示
   const container = document.getElementById('barcodeDisplay');
   const barcodesHtml = `
     <div class="barcode-grid">
@@ -694,7 +790,6 @@ function displaySingleModeBarcodes(barcodes) {
   
   container.innerHTML = barcodesHtml;
   
-  // 生成每个条码
   setTimeout(() => {
     barcodes.forEach((code, idx) => {
       const canvas = document.getElementById(`single_barcode_${idx}`);
@@ -815,6 +910,7 @@ function clearAllBlacklist() {
 
 function parseExcelData(jsonData) {
   console.log('开始解析Excel，总行数:', jsonData.length);
+  console.log('前3行数据:', jsonData.slice(0, 3));
   
   allOrders = [];
   waybillMap.clear();
@@ -824,17 +920,34 @@ function parseExcelData(jsonData) {
   
   for (let i = 2; i < jsonData.length; i++) {
     const row = jsonData[i];
-    if (!row || row.length < 15) continue;
+    if (!row || row.length < 15) {
+      console.log(`第${i+1}行数据不完整，跳过`);
+      continue;
+    }
     
     let waybillRaw = (row[0] || '').toString().trim();
     let waybill = waybillRaw.replace(/\D/g, '');
     let destinationRaw = (row[3] || '').toString().trim();
     let pieces = parseInt(row[14]) || 0;
     
-    if (waybill.length !== 12 || pieces < 1) continue;
+    // 调试前几行
+    if (i < 5) {
+      console.log(`第${i+1}行: 运单号=${waybill}, 件数=${pieces}, 到达部门=${destinationRaw}`);
+    }
+    
+    if (waybill.length !== 12) {
+      if (waybillRaw) console.log(`跳过：运单号长度不对 ${waybill}`);
+      continue;
+    }
+    
+    if (pieces < 1) {
+      console.log(`跳过：件数无效 ${pieces}`);
+      continue;
+    }
     
     if (isInBlacklist(destinationRaw)) {
       filteredCount++;
+      console.log(`过滤：${waybill} 部门在黑名单中`);
       continue;
     }
     
@@ -864,12 +977,54 @@ function parseExcelData(jsonData) {
   
   if (allOrders.length > 0) {
     document.getElementById('navControls').style.display = 'flex';
+    updatePageNumberInput();
     renderCurrentOrder();
+    console.log(`成功解析 ${allOrders.length} 个运单，总件数 ${totalPieces}`);
   } else {
     document.getElementById('navControls').style.display = 'none';
-    document.getElementById('barcodeDisplay').innerHTML = '<div class="empty-state">⚠️ 没有有效的运单数据<br><br>所有运单均被黑名单过滤或格式错误</div>';
+    document.getElementById('barcodeDisplay').innerHTML = '<div class="empty-state">⚠️ 没有有效的运单数据<br><br>请检查：<br>1. Excel列是否正确（A列运单号、D列到达部门、O列件数）<br>2. 数据是否从第3行开始<br>3. 运单号是否为12位数字<br>4. 件数是否≥1<br>5. 黑名单设置</div>';
     document.getElementById('pageInfo').textContent = '无有效数据';
   }
+}
+
+function updatePageNumberInput() {
+  const pageInput = document.getElementById('pageNumber');
+  if (pageInput) {
+    pageInput.value = currentIndex + 1;
+    pageInput.max = allOrders.length;
+    pageInput.min = 1;
+  }
+}
+
+function jumpToPage() {
+  if (isSingleMode) {
+    alert('当前为单条码模式，请先切换回Excel模式');
+    return;
+  }
+  
+  if (allOrders.length === 0) {
+    alert('没有已加载的运单数据');
+    return;
+  }
+  
+  const pageInput = document.getElementById('pageNumber');
+  let targetPage = parseInt(pageInput.value);
+  
+  if (isNaN(targetPage)) {
+    alert('请输入有效的页码');
+    pageInput.value = currentIndex + 1;
+    return;
+  }
+  
+  if (targetPage < 1) targetPage = 1;
+  if (targetPage > allOrders.length) targetPage = allOrders.length;
+  
+  if (targetPage !== currentIndex + 1) {
+    currentIndex = targetPage - 1;
+    renderCurrentOrder();
+  }
+  
+  pageInput.value = currentIndex + 1;
 }
 
 function renderCurrentOrder() {
@@ -892,6 +1047,7 @@ function renderCurrentOrder() {
   
   document.getElementById('prevBtn').disabled = currentIndex === 0;
   document.getElementById('nextBtn').disabled = currentIndex === allOrders.length - 1;
+  updatePageNumberInput();
   
   const barcodesHtml = `
     <div class="barcode-grid">
@@ -976,6 +1132,7 @@ function clearSearch() {
   }
 }
 
+// 文件上传
 document.getElementById('fileInput').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -993,18 +1150,26 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
       window.lastExcelData = jsonData;
       parseExcelData(jsonData);
     } catch (err) {
-      console.error(err);
+      console.error('解析Excel失败:', err);
       document.getElementById('barcodeDisplay').innerHTML = `<div class="empty-state">❌ 解析失败：${err.message}</div>`;
     }
+  };
+  reader.onerror = function() {
+    document.getElementById('barcodeDisplay').innerHTML = '<div class="empty-state">❌ 文件读取失败，请重试</div>';
   };
   reader.readAsArrayBuffer(file);
 });
 
+// 回车键跳转
 document.addEventListener('keydown', function(e) {
   if (e.key === 'ArrowLeft' && !isSingleMode) prevOrder();
   if (e.key === 'ArrowRight' && !isSingleMode) nextOrder();
+  if (e.key === 'Enter' && document.activeElement === document.getElementById('pageNumber')) {
+    jumpToPage();
+  }
 });
 
+// 将函数挂载到window
 window.addToBlacklist = addToBlacklist;
 window.removeFromBlacklist = removeFromBlacklist;
 window.clearAllBlacklist = clearAllBlacklist;
@@ -1012,13 +1177,19 @@ window.searchWaybill = searchWaybill;
 window.clearSearch = clearSearch;
 window.prevOrder = prevOrder;
 window.nextOrder = nextOrder;
+window.jumpToPage = jumpToPage;
 window.addAutoBlacklistToManual = addAutoBlacklistToManual;
 window.cancelAutoAdd = cancelAutoAdd;
 window.generateMultipleBarcodes = generateMultipleBarcodes;
 window.switchToExcelMode = switchToExcelMode;
 
+// 初始化
 loadBlacklist();
-console.log('物流条码生成器已启动（支持多格式子单号输入）');
+console.log('物流条码生成器已启动（智能解析版 + 页码跳转）');
+console.log('使用说明：');
+console.log('1. 上传配载单明细.xlsx文件');
+console.log('2. 自动读取A列运单号、D列到达部门、O列件数');
+console.log('3. 数据从第3行开始读取');
 </script>
 </body>
 </html>
