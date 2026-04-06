@@ -1,11 +1,1024 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>PakePlus</title>
-    </head>
-    <body>
-        Hello World
-    </body>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>物流条码生成器 - 大条码版</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  background: #f0f2f5;
+  padding: 20px;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+h1 {
+  font-size: 24px;
+  margin-bottom: 8px;
+  color: #1a1a1a;
+}
+
+.subtitle {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.upload-area {
+  background: #fafafa;
+  border: 2px dashed #d9d9d9;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-bottom: 20px;
+}
+
+.upload-area:hover {
+  border-color: #1890ff;
+  background: #f0f7ff;
+}
+
+.upload-area input {
+  display: none;
+}
+
+.upload-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.upload-text {
+  color: #666;
+  font-size: 14px;
+}
+
+.blacklist-section {
+  background: #fff7e6;
+  border: 1px solid #ffe58f;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.blacklist-section h3 {
+  font-size: 16px;
+  margin-bottom: 12px;
+  color: #d48806;
+}
+
+.auto-add-info {
+  background: #e6f7ff;
+  border: 1px solid #91d5ff;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #1890ff;
+}
+
+.auto-add-info button {
+  background: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 12px;
+  margin-left: 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.blacklist-input {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.blacklist-input input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 14px;
+  min-width: 200px;
+}
+
+.blacklist-input button {
+  padding: 8px 20px;
+  background: #ff4d4f;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.blacklist-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.blacklist-tag {
+  background: #ff4d4f;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.blacklist-tag button {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+}
+
+.stats {
+  background: #e6f7ff;
+  border: 1px solid #91d5ff;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.stats-item {
+  font-size: 14px;
+}
+
+.stats-value {
+  font-weight: bold;
+  color: #1890ff;
+  font-size: 18px;
+}
+
+.search-section {
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.search-section h3 {
+  font-size: 16px;
+  margin-bottom: 12px;
+  color: #389e0d;
+}
+
+.search-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.search-bar input {
+  flex: 1;
+  padding: 10px 16px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.search-bar button {
+  padding: 10px 24px;
+  background: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.direct-generate {
+  background: #f9f0ff;
+  border: 1px solid #d3adf7;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 12px;
+}
+
+.direct-generate h4 {
+  font-size: 14px;
+  margin-bottom: 12px;
+  color: #531dab;
+}
+
+.direct-input-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.direct-input-group .waybill-input {
+  flex: 2;
+  padding: 12px 16px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: monospace;
+  background: white;
+}
+
+.direct-input-group .sub-input {
+  flex: 3;
+  padding: 12px 16px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: monospace;
+  background: white;
+}
+
+.direct-input-group button {
+  flex: 1;
+  padding: 12px 24px;
+  background: #722ed1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.direct-input-group button:hover {
+  background: #531dab;
+  transform: translateY(-1px);
+}
+
+.direct-hint {
+  font-size: 12px;
+  color: #999;
+  margin-top: 8px;
+  line-height: 1.6;
+}
+
+.direct-hint strong {
+  color: #722ed1;
+}
+
+.nav-controls {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.nav-btn {
+  padding: 12px 28px;
+  background: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background: #40a9ff;
+  transform: translateY(-1px);
+}
+
+.nav-btn:disabled {
+  background: #d9d9d9;
+  cursor: not-allowed;
+}
+
+.page-info {
+  text-align: center;
+  font-size: 18px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+}
+
+.barcode-container {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+.barcode-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 30px;
+}
+
+.barcode-item {
+  text-align: center;
+  padding: 24px 20px;
+  background: #fafafa;
+  border-radius: 12px;
+  transition: all 0.3s;
+  border: 1px solid #e8e8e8;
+}
+
+.barcode-item:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  transform: translateY(-2px);
+}
+
+.barcode-item canvas {
+  width: 100%;
+  height: auto;
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.barcode-number {
+  margin-top: 16px;
+  font-family: monospace;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1890ff;
+  letter-spacing: 2px;
+  background: white;
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: #999;
+  font-size: 16px;
+}
+
+.hint {
+  font-size: 12px;
+  color: #999;
+  margin-top: 12px;
+  text-align: center;
+}
+
+.loading {
+  text-align: center;
+  padding: 60px;
+  color: #1890ff;
+  font-size: 18px;
+}
+
+@media (max-width: 768px) {
+  .barcode-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .container {
+    padding: 12px;
+  }
+  
+  .stats {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .barcode-number {
+    font-size: 14px;
+  }
+  
+  .direct-input-group {
+    flex-direction: column;
+  }
+  
+  .direct-input-group button {
+    width: 100%;
+  }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <h1>📦 物流条码生成器 - 大条码版</h1>
+    <div class="subtitle">支持Excel上传 | 条码加大加粗 | 支持单号灵活输入（逗号/范围）</div>
+    
+    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+      <div class="upload-icon">📁</div>
+      <div class="upload-text">点击上传配载单明细.xlsx</div>
+      <div class="upload-text" style="font-size: 12px; margin-top: 8px;">自动读取：A列(运单号) | D列(到达部门) | O列(件数)</div>
+      <input type="file" id="fileInput" accept=".xlsx, .xls">
+    </div>
+    
+    <div class="blacklist-section">
+      <h3>🚫 到达部门黑名单</h3>
+      <div class="auto-add-info">
+        🔧 <strong>已自动添加以下部门到黑名单：</strong> 431、432、433、434 开头的部门
+        <button onclick="addAutoBlacklistToManual()">✅ 确认添加</button>
+        <button onclick="cancelAutoAdd()" style="background:#999;">❌ 取消</button>
+        <div style="font-size: 12px; margin-top: 6px; color: #666;">点击"确认添加"后，这些部门会被加入黑名单，之后可以手动删除</div>
+      </div>
+      <div class="blacklist-input">
+        <input type="text" id="blacklistInput" placeholder="输入部门编码或名称，如：024NM 或 新民营业部">
+        <button onclick="addToBlacklist()">➕ 手动添加</button>
+        <button onclick="clearAllBlacklist()" style="background:#999;">🗑️ 清空所有</button>
+      </div>
+      <div class="blacklist-list" id="blacklistContainer"></div>
+      <div class="hint">💡 点击标签上的 × 可从黑名单中删除该部门</div>
+    </div>
+    
+    <div class="stats" id="stats" style="display: none;">
+      <div class="stats-item">📊 总运单数: <span class="stats-value" id="totalOrders">0</span></div>
+      <div class="stats-item">✅ 有效运单: <span class="stats-value" id="validOrders">0</span></div>
+      <div class="stats-item">🚫 黑名单过滤: <span class="stats-value" id="filteredOrders">0</span></div>
+      <div class="stats-item">📦 总件数: <span class="stats-value" id="totalPieces">0</span></div>
+    </div>
+    
+    <div class="search-section">
+      <h3>🔍 运单搜索与快速生成</h3>
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="输入12位运单号搜索已上传的运单...">
+        <button onclick="searchWaybill()">🔍 搜索运单</button>
+        <button onclick="clearSearch()">🗑️ 清除</button>
+      </div>
+      
+      <div class="direct-generate">
+        <h4>⚡ 直接生成条码</h4>
+        <div class="direct-input-group">
+          <input type="text" id="waybillInput" class="waybill-input" placeholder="12位运单号，例如：112712345678" maxlength="12">
+          <input type="text" id="subInput" class="sub-input" placeholder="子单号（支持多种格式）&#10;单个：002&#10;多个：002,004,006,008,011&#10;范围：005-007&#10;混合：001,003,005-008,010">
+          <button onclick="generateMultipleBarcodes()">生成条码</button>
+        </div>
+        <div class="direct-hint">
+          💡 <strong>输入说明：</strong><br>
+          • <strong>单个</strong>：第二部分输入 "002" → 生成 112712345678002<br>
+          • <strong>多个</strong>：第二部分输入 "002,004,006,008,011" → 生成5个条码<br>
+          • <strong>范围</strong>：第二部分输入 "005-007" → 生成 005,006,007 三个条码<br>
+          • <strong>混合</strong>：第二部分输入 "001,003,005-008,010" → 支持逗号和范围混合
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="nav-controls" id="navControls" style="display: none;">
+    <button class="nav-btn" onclick="prevOrder()" id="prevBtn">← 上一单</button>
+    <button class="nav-btn" onclick="nextOrder()" id="nextBtn">下一单 →</button>
+  </div>
+  
+  <div class="page-info" id="pageInfo">请上传配载单明细Excel文件，或在下方输入12位运单号和子单号</div>
+  
+  <div class="barcode-container">
+    <div id="barcodeDisplay"></div>
+  </div>
+</div>
+
+<script>
+// ==================== CODE128 条码生成器（加大版）====================
+const Code128 = {
+  charMap: {
+    '0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
+    'A': 33, 'B': 34, 'C': 35, 'D': 36, 'E': 37, 'F': 38, 'G': 39, 'H': 40, 'I': 41,
+    'J': 42, 'K': 43, 'L': 44, 'M': 45, 'N': 46, 'O': 47, 'P': 48, 'Q': 49, 'R': 50,
+    'S': 51, 'T': 52, 'U': 53, 'V': 54, 'W': 55, 'X': 56, 'Y': 57, 'Z': 58,
+    '-': 59, '.': 60, ' ': 61, '$': 62, '/': 63, '+': 64, '%': 65
+  },
+  
+  patterns: [
+    "11011001100", "11001101100", "11001100110", "10010011000", "10010001100",
+    "10001001100", "10011001000", "10011000100", "10001100100", "11001001000",
+    "11001000100", "11000100100", "10110011100", "10011011100", "10011001110",
+    "10111001100", "10011101100", "10011100110", "11001110010", "11001011100",
+    "11001001110", "11011100100", "11001110100", "11101101110", "11101001100",
+    "11100101100", "11100100110", "11101100100", "11100110100", "11100110010",
+    "11011011110", "11011110110", "11110110110", "11011101110", "11011101010",
+    "11010111010", "11010001110", "11011101100", "11001101110", "11010101100",
+    "11010100110", "11101011100", "11101001110", "11101110100", "11101110010",
+    "11101011010", "11101101010", "11101010110", "11101100110", "11101010010",
+    "11101101001", "11101100101", "11101010101", "11100101011", "11101101010"
+  ],
+  
+  generate(canvas, code, options = {}) {
+    const width = options.width || 2.5;
+    const height = options.height || 120;
+    
+    let checksum = 104;
+    for (let i = 0; i < code.length; i++) {
+      const charCode = this.charMap[code[i]];
+      if (charCode === undefined) continue;
+      checksum += charCode * (i + 1);
+    }
+    checksum = checksum % 103;
+    
+    let pattern = this.patterns[104];
+    for (let i = 0; i < code.length; i++) {
+      const charCode = this.charMap[code[i]];
+      if (charCode !== undefined) {
+        pattern += this.patterns[charCode];
+      }
+    }
+    pattern += this.patterns[checksum];
+    pattern += "1100011101011";
+    
+    let barWidth = 0;
+    for (let i = 0; i < pattern.length; i++) {
+      barWidth += pattern[i] === '1' ? width * 2 : width;
+    }
+    
+    canvas.width = barWidth;
+    canvas.height = height;
+    
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#000000';
+    
+    let x = 0;
+    for (let i = 0; i < pattern.length; i++) {
+      const barLength = pattern[i] === '1' ? width * 2 : width;
+      if (pattern[i] === '1') {
+        ctx.fillRect(x, 0, barLength, height);
+      }
+      x += barLength;
+    }
+    
+    return canvas;
+  }
+};
+
+// ==================== 子单号解析器 ====================
+function parseSubNumbers(input) {
+  if (!input || !input.trim()) return [];
+  
+  const result = [];
+  const str = input.trim();
+  
+  // 按逗号分割（支持中英文逗号、空格）
+  const parts = str.split(/[,，\s]+/);
+  
+  for (const part of parts) {
+    if (!part) continue;
+    
+    // 检查是否为范围（如：005-007）
+    if (part.includes('-')) {
+      const rangeParts = part.split('-');
+      if (rangeParts.length === 2) {
+        const start = parseInt(rangeParts[0]);
+        const end = parseInt(rangeParts[1]);
+        if (!isNaN(start) && !isNaN(end) && start <= end) {
+          for (let i = start; i <= end; i++) {
+            result.push(i.toString().padStart(3, '0'));
+          }
+        }
+      }
+    } 
+    // 单个数字
+    else {
+      const num = parseInt(part);
+      if (!isNaN(num)) {
+        result.push(num.toString().padStart(3, '0'));
+      }
+    }
+  }
+  
+  // 去重并排序
+  return [...new Set(result)].sort();
+}
+
+// 生成多个条码
+function generateMultipleBarcodes() {
+  const waybill = document.getElementById('waybillInput').value.trim();
+  const subInput = document.getElementById('subInput').value.trim();
+  
+  // 验证运单号
+  if (!waybill) {
+    alert('请输入12位运单号');
+    return;
+  }
+  
+  const waybillClean = waybill.replace(/\D/g, '');
+  if (waybillClean.length !== 12) {
+    alert(`运单号必须是12位数字（当前${waybillClean.length}位）`);
+    return;
+  }
+  
+  // 验证子单号输入
+  if (!subInput) {
+    alert('请输入子单号（支持单个、逗号分隔、范围）');
+    return;
+  }
+  
+  // 解析子单号
+  const subNumbers = parseSubNumbers(subInput);
+  
+  if (subNumbers.length === 0) {
+    alert('未能解析出有效的子单号，请检查输入格式\n\n示例：\n单个：002\n多个：002,004,006\n范围：005-007');
+    return;
+  }
+  
+  // 生成完整的15位条码
+  const barcodes = subNumbers.map(sub => waybillClean + sub);
+  
+  // 显示结果
+  displaySingleModeBarcodes(barcodes);
+  
+  // 清空输入框（可选）
+  // document.getElementById('waybillInput').value = '';
+  // document.getElementById('subInput').value = '';
+}
+
+// 显示单模式条码
+function displaySingleModeBarcodes(barcodes) {
+  // 隐藏导航按钮
+  document.getElementById('navControls').style.display = 'none';
+  
+  // 更新页面信息
+  const waybill = barcodes[0].substring(0, 12);
+  document.getElementById('pageInfo').innerHTML = `
+    ⚡ 单条码模式 | 运单号: <strong style="font-size:20px;">${waybill}</strong> | 共生成 ${barcodes.length} 个条码
+    <button onclick="switchToExcelMode()" style="margin-left:16px;padding:6px 16px;background:#52c41a;color:white;border:none;border-radius:6px;cursor:pointer;">📊 切换回Excel模式</button>
+  `;
+  
+  // 生成条码显示
+  const container = document.getElementById('barcodeDisplay');
+  const barcodesHtml = `
+    <div class="barcode-grid">
+      ${barcodes.map((code, idx) => `
+        <div class="barcode-item">
+          <canvas id="single_barcode_${idx}"></canvas>
+          <div class="barcode-number">${code}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  
+  container.innerHTML = barcodesHtml;
+  
+  // 生成每个条码
+  setTimeout(() => {
+    barcodes.forEach((code, idx) => {
+      const canvas = document.getElementById(`single_barcode_${idx}`);
+      if (canvas) {
+        try {
+          const barWidth = code.length > 13 ? 2.2 : 2.5;
+          Code128.generate(canvas, code, { width: barWidth, height: 110 });
+        } catch (err) {
+          console.error(`生成条码失败 ${code}:`, err);
+        }
+      }
+    });
+  }, 50);
+}
+
+// ==================== 业务逻辑 ====================
+let allOrders = [];
+let currentIndex = 0;
+let blacklist = [];
+let waybillMap = new Map();
+let isSingleMode = false;
+
+const autoBlacklistItems = ['431', '432', '433', '434'];
+
+function extractDepartmentCode(department) {
+  if (!department) return '';
+  const match = department.match(/\[(\d{3})/);
+  return match ? match[1] : '';
+}
+
+function isInBlacklist(department) {
+  if (!department) return false;
+  return blacklist.some(bl => department.includes(bl));
+}
+
+function loadBlacklist() {
+  const saved = localStorage.getItem('barcode_blacklist_final');
+  if (saved) {
+    blacklist = JSON.parse(saved);
+  }
+  renderBlacklist();
+}
+
+function saveBlacklist() {
+  localStorage.setItem('barcode_blacklist_final', JSON.stringify(blacklist));
+  renderBlacklist();
+}
+
+function renderBlacklist() {
+  const container = document.getElementById('blacklistContainer');
+  if (blacklist.length === 0) {
+    container.innerHTML = '<div style="color:#999;font-size:12px;">暂无黑名单</div>';
+    return;
+  }
+  container.innerHTML = blacklist.map(item => `
+    <div class="blacklist-tag">
+      ${item}
+      <button onclick="removeFromBlacklist('${item.replace(/'/g, "\\'")}')">×</button>
+    </div>
+  `).join('');
+}
+
+function addAutoBlacklistToManual() {
+  let addedCount = 0;
+  for (const prefix of autoBlacklistItems) {
+    if (!blacklist.includes(prefix)) {
+      blacklist.push(prefix);
+      addedCount++;
+    }
+  }
+  if (addedCount > 0) {
+    saveBlacklist();
+    alert(`✅ 已成功添加 ${addedCount} 个部门前缀到黑名单：${autoBlacklistItems.join(', ')}\n\n这些部门开头的运单将被过滤，你可以点击标签上的 × 删除。`);
+    if (window.lastExcelData) {
+      parseExcelData(window.lastExcelData);
+    }
+  } else {
+    alert('这些部门已经在黑名单中了');
+  }
+}
+
+function cancelAutoAdd() {
+  alert('已取消添加，你可以稍后点击"确认添加"按钮');
+}
+
+function addToBlacklist() {
+  const input = document.getElementById('blacklistInput');
+  const item = input.value.trim();
+  if (item && !blacklist.includes(item)) {
+    blacklist.push(item);
+    saveBlacklist();
+    input.value = '';
+    if (window.lastExcelData) {
+      parseExcelData(window.lastExcelData);
+    }
+  } else if (blacklist.includes(item)) {
+    alert('该部门已在黑名单中');
+  }
+}
+
+function removeFromBlacklist(item) {
+  blacklist = blacklist.filter(i => i !== item);
+  saveBlacklist();
+  if (window.lastExcelData) {
+    parseExcelData(window.lastExcelData);
+  }
+}
+
+function clearAllBlacklist() {
+  if (confirm('确定要清空所有黑名单吗？')) {
+    blacklist = [];
+    saveBlacklist();
+    if (window.lastExcelData) {
+      parseExcelData(window.lastExcelData);
+    }
+  }
+}
+
+function parseExcelData(jsonData) {
+  console.log('开始解析Excel，总行数:', jsonData.length);
+  
+  allOrders = [];
+  waybillMap.clear();
+  
+  let filteredCount = 0;
+  let totalPieces = 0;
+  
+  for (let i = 2; i < jsonData.length; i++) {
+    const row = jsonData[i];
+    if (!row || row.length < 15) continue;
+    
+    let waybillRaw = (row[0] || '').toString().trim();
+    let waybill = waybillRaw.replace(/\D/g, '');
+    let destinationRaw = (row[3] || '').toString().trim();
+    let pieces = parseInt(row[14]) || 0;
+    
+    if (waybill.length !== 12 || pieces < 1) continue;
+    
+    if (isInBlacklist(destinationRaw)) {
+      filteredCount++;
+      continue;
+    }
+    
+    const barcodes = [];
+    for (let j = 1; j <= pieces; j++) {
+      barcodes.push(waybill + j.toString().padStart(3, '0'));
+    }
+    
+    totalPieces += pieces;
+    allOrders.push({
+      waybill: waybill,
+      pieces: pieces,
+      destination: destinationRaw,
+      barcodes: barcodes
+    });
+    waybillMap.set(waybill, allOrders.length - 1);
+  }
+  
+  document.getElementById('stats').style.display = 'flex';
+  document.getElementById('totalOrders').textContent = (jsonData.length - 2) || 0;
+  document.getElementById('validOrders').textContent = allOrders.length;
+  document.getElementById('filteredOrders').textContent = filteredCount;
+  document.getElementById('totalPieces').textContent = totalPieces;
+  
+  currentIndex = 0;
+  isSingleMode = false;
+  
+  if (allOrders.length > 0) {
+    document.getElementById('navControls').style.display = 'flex';
+    renderCurrentOrder();
+  } else {
+    document.getElementById('navControls').style.display = 'none';
+    document.getElementById('barcodeDisplay').innerHTML = '<div class="empty-state">⚠️ 没有有效的运单数据<br><br>所有运单均被黑名单过滤或格式错误</div>';
+    document.getElementById('pageInfo').textContent = '无有效数据';
+  }
+}
+
+function renderCurrentOrder() {
+  if (allOrders.length === 0) return;
+  
+  isSingleMode = false;
+  const order = allOrders[currentIndex];
+  const container = document.getElementById('barcodeDisplay');
+  const pageInfo = document.getElementById('pageInfo');
+  
+  const deptCode = extractDepartmentCode(order.destination);
+  
+  pageInfo.innerHTML = `
+    📄 第 ${currentIndex + 1} / ${allOrders.length} 单
+    | 运单号: <strong style="font-size:22px;">${order.waybill}</strong>
+    | 件数: ${order.pieces} 件
+    | 条码数: ${order.barcodes.length} 个
+    ${order.destination ? `<br>📍 到达部门: ${order.destination} ${deptCode ? `(代码: ${deptCode})` : ''}` : ''}
+  `;
+  
+  document.getElementById('prevBtn').disabled = currentIndex === 0;
+  document.getElementById('nextBtn').disabled = currentIndex === allOrders.length - 1;
+  
+  const barcodesHtml = `
+    <div class="barcode-grid">
+      ${order.barcodes.map((code, idx) => `
+        <div class="barcode-item">
+          <canvas id="barcode_${currentIndex}_${idx}"></canvas>
+          <div class="barcode-number">${code}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  
+  container.innerHTML = barcodesHtml;
+  
+  setTimeout(() => {
+    order.barcodes.forEach((code, idx) => {
+      const canvas = document.getElementById(`barcode_${currentIndex}_${idx}`);
+      if (canvas) {
+        try {
+          const barWidth = code.length > 13 ? 2.2 : 2.5;
+          Code128.generate(canvas, code, { width: barWidth, height: 110 });
+        } catch (err) {
+          console.error(`生成条码失败 ${code}:`, err);
+        }
+      }
+    });
+  }, 50);
+}
+
+function switchToExcelMode() {
+  if (allOrders.length > 0) {
+    isSingleMode = false;
+    document.getElementById('navControls').style.display = 'flex';
+    renderCurrentOrder();
+  } else {
+    alert('没有已加载的Excel数据，请先上传文件');
+    document.getElementById('navControls').style.display = 'none';
+    document.getElementById('pageInfo').innerHTML = '请上传配载单明细Excel文件，或在下方输入12位运单号和子单号';
+    document.getElementById('barcodeDisplay').innerHTML = '<div class="empty-state">请上传Excel文件或输入运单号生成条码</div>';
+  }
+}
+
+function prevOrder() {
+  if (currentIndex > 0 && !isSingleMode) {
+    currentIndex--;
+    renderCurrentOrder();
+  }
+}
+
+function nextOrder() {
+  if (currentIndex < allOrders.length - 1 && !isSingleMode) {
+    currentIndex++;
+    renderCurrentOrder();
+  }
+}
+
+function searchWaybill() {
+  const searchValue = document.getElementById('searchInput').value.trim().replace(/\D/g, '');
+  if (!searchValue) {
+    alert('请输入12位运单号');
+    return;
+  }
+  if (searchValue.length !== 12) {
+    alert('运单号必须是12位数字');
+    return;
+  }
+  
+  const index = waybillMap.get(searchValue);
+  if (index !== undefined) {
+    currentIndex = index;
+    renderCurrentOrder();
+    document.getElementById('searchInput').value = '';
+  } else {
+    alert(`未找到运单号：${searchValue}\n可能原因：该运单被黑名单过滤了`);
+  }
+}
+
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
+  if (allOrders.length > 0 && !isSingleMode) {
+    renderCurrentOrder();
+  }
+}
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  document.getElementById('barcodeDisplay').innerHTML = '<div class="loading">⏳ 正在解析Excel文件...</div>';
+  
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      const data = new Uint8Array(evt.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+      
+      window.lastExcelData = jsonData;
+      parseExcelData(jsonData);
+    } catch (err) {
+      console.error(err);
+      document.getElementById('barcodeDisplay').innerHTML = `<div class="empty-state">❌ 解析失败：${err.message}</div>`;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'ArrowLeft' && !isSingleMode) prevOrder();
+  if (e.key === 'ArrowRight' && !isSingleMode) nextOrder();
+});
+
+window.addToBlacklist = addToBlacklist;
+window.removeFromBlacklist = removeFromBlacklist;
+window.clearAllBlacklist = clearAllBlacklist;
+window.searchWaybill = searchWaybill;
+window.clearSearch = clearSearch;
+window.prevOrder = prevOrder;
+window.nextOrder = nextOrder;
+window.addAutoBlacklistToManual = addAutoBlacklistToManual;
+window.cancelAutoAdd = cancelAutoAdd;
+window.generateMultipleBarcodes = generateMultipleBarcodes;
+window.switchToExcelMode = switchToExcelMode;
+
+loadBlacklist();
+console.log('物流条码生成器已启动（支持多格式子单号输入）');
+</script>
+</body>
 </html>
